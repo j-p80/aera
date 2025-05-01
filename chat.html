@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Intercom Chat</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: sans-serif;
+      height: 100vh;
+      width: 100vw;
+      background-color: transparent;
+    }
+  </style>
+</head>
+<body>
+  <script>
+    // Parse URL parameters
+    const urlParams = new URLSearchParams(window.location.search);
+    const userId = urlParams.get('userId') || 'default-user';
+    const userName = urlParams.get('userName') || 'Default User';
+    const userEmail = urlParams.get('userEmail') || 'default@example.com';
+    const createdAt = parseInt(urlParams.get('createdAt') || Math.floor(Date.now() / 1000));
+    
+    // Set up Intercom with the parsed parameters
+    window.intercomSettings = {
+      api_base: "https://api-iam.intercom.io",
+      app_id: "qqgifgto",
+      user_id: userId,
+      name: userName,
+      email: userEmail,
+      created_at: createdAt
+    };
+    
+    // Log the parameters for debugging (you can remove this in production)
+    console.log("Intercom settings:", window.intercomSettings);
+  </script>
+  
+  <script>
+    // Intercom widget code
+    (function(){var w=window;var ic=w.Intercom;if(typeof ic==="function"){ic('reattach_activator');ic('update',w.intercomSettings);}else{var d=document;var i=function(){i.c(arguments);};i.q=[];i.c=function(args){i.q.push(args);};w.Intercom=i;var l=function(){var s=d.createElement('script');s.type='text/javascript';s.async=true;s.src='https://widget.intercom.io/widget/qqgifgto';var x=d.getElementsByTagName('script')[0];x.parentNode.insertBefore(s,x);};if(document.readyState==='complete'){l();}else if(w.attachEvent){w.attachEvent('onload',l);}else{w.addEventListener('load',l,false);}}})();
+  </script>
+</body>
+</html>
