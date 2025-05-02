@@ -3,206 +3,96 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Intercom Debug</title>
-    <!-- Allow all required domains in CSP -->
-    <meta http-equiv="Content-Security-Policy" content="default-src * 'unsafe-inline' 'unsafe-eval'; script-src * 'unsafe-inline' 'unsafe-eval'; connect-src * 'unsafe-inline'; img-src * data: blob: 'unsafe-inline'; frame-src *; style-src * 'unsafe-inline';">
+    <title>Chat Support</title>
     <style>
         body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            padding: 20px;
-            max-width: 800px;
-            margin: 0 auto;
-            line-height: 1.5;
-        }
-        
-        .debug-panel {
-            margin-top: 20px;
-            padding: 15px;
-            border: 1px solid #ddd;
-            border-radius: 5px;
+            font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+            margin: 0;
+            padding: 0;
+            height: 100vh;
+            width: 100vw;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
             background-color: #f9f9f9;
         }
         
-        .debug-log {
-            height: 200px;
-            overflow-y: auto;
-            padding: 10px;
-            background-color: #333;
-            color: #fff;
-            font-family: monospace;
-            border-radius: 5px;
-            margin-top: 10px;
-        }
-        
-        .log-entry {
-            margin-bottom: 5px;
-            word-wrap: break-word;
-        }
-        
-        .error {
-            color: #ff6b6b;
-        }
-        
-        .success {
-            color: #51cf66;
-        }
-        
-        .info {
-            color: #74c0fc;
-        }
-        
-        button {
-            margin-top: 10px;
-            padding: 8px 12px;
-            background-color: #228be6;
-            color: white;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-        }
-        
-        button:hover {
-            background-color: #1971c2;
-        }
-        
-        .loading {
-            text-align: center;
-            margin-top: 20px;
-        }
-        
-        .spinner {
-            width: 40px;
-            height: 40px;
-            margin: 20px auto;
-            border-radius: 50%;
+        .loader {
             border: 5px solid #f3f3f3;
             border-top: 5px solid #3498db;
-            animation: spin 1.5s linear infinite;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin-bottom: 20px;
         }
         
         @keyframes spin {
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
         }
+        
+        .message {
+            font-size: 18px;
+            color: #333;
+            text-align: center;
+            max-width: 80%;
+        }
+        
+        .error {
+            color: #e74c3c;
+            margin-top: 20px;
+            display: none;
+        }
+        
+        .button {
+            margin-top: 20px;
+            padding: 10px 20px;
+            background-color: #3498db;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            display: none;
+        }
+        
+        .button:hover {
+            background-color: #2980b9;
+        }
     </style>
 </head>
 <body>
-    <h1>Intercom Debug Page</h1>
-    
-    <div class="loading">
-        <div class="spinner"></div>
-        <p>Loading Intercom Chat...</p>
+    <div class="loader" id="loader"></div>
+    <div class="message" id="message">Initializing chat support...</div>
+    <div class="error" id="error">
+        There was a problem loading the chat widget. 
+        <br>Please try refreshing the page.
     </div>
-    
-    <div class="debug-panel">
-        <h2>Debug Information</h2>
-        <p><strong>URL Parameters:</strong> <span id="url-params">Loading...</span></p>
-        <p><strong>Intercom Status:</strong> <span id="intercom-status">Not initialized</span></p>
-        
-        <h3>Console Log</h3>
-        <div class="debug-log" id="debug-log"></div>
-        
-        <button id="force-load">Force Load Intercom</button>
-        <button id="open-messenger">Open Messenger</button>
-    </div>
-    
+    <button class="button" id="manual-load">Try Manual Load</button>
+
     <script>
-        // Custom logging function
-        function debugLog(message, type = 'info') {
-            // Log to console
-            console.log(message);
-            
-            // Add to debug panel
-            const logContainer = document.getElementById('debug-log');
-            const logEntry = document.createElement('div');
-            logEntry.className = `log-entry ${type}`;
-            logEntry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
-            logContainer.appendChild(logEntry);
-            logContainer.scrollTop = logContainer.scrollHeight;
-        }
-        
-        // Override console.log and console.error
-        const originalConsoleLog = console.log;
-        const originalConsoleError = console.error;
-        
-        console.log = function(message) {
-            originalConsoleLog.apply(console, arguments);
-            if (typeof message === 'object') {
-                try {
-                    message = JSON.stringify(message);
-                } catch(e) {
-                    message = String(message);
-                }
-            }
-            debugLog(message, 'info');
-        };
-        
-        console.error = function(message) {
-            originalConsoleError.apply(console, arguments);
-            if (typeof message === 'object') {
-                try {
-                    message = JSON.stringify(message);
-                } catch(e) {
-                    message = String(message);
-                }
-            }
-            debugLog(message, 'error');
-        };
-        
-        // Function to get URL parameters
+        // Function to parse URL parameters
         function getUrlParams() {
             const params = {};
-            try {
-                const queryString = window.location.search;
-                const urlParams = new URLSearchParams(queryString);
-                
-                params.userId = urlParams.get('userId') || 'anonymous-' + Math.random().toString(36).substr(2, 9);
-                params.userName = urlParams.get('userName') || 'Guest User';
-                params.userEmail = urlParams.get('userEmail') || '';
-                params.createdAt = urlParams.get('createdAt') ? parseInt(urlParams.get('createdAt')) : Math.floor(Date.now() / 1000);
-                
-                // Display in UI
-                document.getElementById('url-params').textContent = JSON.stringify(params, null, 2);
-                
-                debugLog('URL parameters parsed: ' + JSON.stringify(params));
-            } catch (error) {
-                debugLog('Error parsing URL parameters: ' + error.message, 'error');
-            }
+            const queryString = window.location.search;
+            const urlParams = new URLSearchParams(queryString);
+            
+            params.userId = urlParams.get('userId') || 'anonymous-' + Math.random().toString(36).substring(2, 9);
+            params.userName = urlParams.get('userName') || 'Guest User';
+            params.userEmail = urlParams.get('userEmail') || null;
+            params.createdAt = urlParams.get('createdAt') ? parseInt(urlParams.get('createdAt')) : Math.floor(Date.now() / 1000);
+            
             return params;
         }
+
+        // Get the URL parameters
+        const userData = getUrlParams();
         
-        // Initialize page
-        document.addEventListener('DOMContentLoaded', function() {
-            debugLog('DOM loaded');
-            
-            // Get user data from URL
-            const userData = getUrlParams();
-            
-            // Setup force load button
-            document.getElementById('force-load').addEventListener('click', function() {
-                loadIntercom(userData);
-                debugLog('Manually triggered Intercom load');
-            });
-            
-            // Setup open messenger button
-            document.getElementById('open-messenger').addEventListener('click', function() {
-                if (window.Intercom) {
-                    window.Intercom('show');
-                    debugLog('Manually opened Intercom messenger');
-                } else {
-                    debugLog('Intercom not available yet', 'error');
-                }
-            });
-            
-            // Load Intercom automatically
-            loadIntercom(userData);
-        });
-        
-        // Function to load Intercom
-        function loadIntercom(userData) {
-            debugLog('Setting up Intercom with user data');
-            
-            // Set up Intercom settings
+        // Function to initialize Intercom with delay
+        function initializeIntercom() {
+            // Configure Intercom with user data
             window.intercomSettings = {
                 api_base: "https://api-iam.intercom.io",
                 app_id: "qqgifgto",
@@ -212,77 +102,114 @@
                 created_at: userData.createdAt
             };
             
-            debugLog('Intercom settings configured: ' + JSON.stringify(window.intercomSettings));
+            console.log("Intercom settings configured:", window.intercomSettings);
             
-            // Try to load the Intercom script directly
-            const scriptElement = document.createElement('script');
-            scriptElement.async = true;
-            scriptElement.src = 'https://widget.intercom.io/widget/qqgifgto';
-            scriptElement.onload = function() {
-                debugLog('Intercom script loaded successfully', 'success');
-                document.getElementById('intercom-status').textContent = 'Script loaded';
-                document.getElementById('intercom-status').style.color = 'green';
+            // Load Intercom script directly
+            const script = document.createElement('script');
+            script.async = true;
+            script.src = "https://widget.intercom.io/widget/qqgifgto";
+            
+            // Handle load success
+            script.onload = function() {
+                console.log("Intercom script loaded successfully");
+                document.getElementById('loader').style.display = 'none';
+                document.getElementById('message').innerText = "Chat support is ready!";
                 
-                // Auto-open Intercom
+                // Show Intercom after a short delay
                 setTimeout(function() {
                     if (window.Intercom) {
+                        console.log("Opening Intercom messenger");
                         window.Intercom('show');
-                        debugLog('Automatically opened Intercom messenger', 'success');
                     }
                 }, 1000);
             };
-            scriptElement.onerror = function() {
-                debugLog('Failed to load Intercom script directly', 'error');
-                document.getElementById('intercom-status').textContent = 'Script failed to load';
-                document.getElementById('intercom-status').style.color = 'red';
-                
-                // Try using the standard snippet as fallback
-                loadIntercomStandardSnippet();
+            
+            // Handle load error
+            script.onerror = function() {
+                console.error("Failed to load Intercom script");
+                document.getElementById('loader').style.display = 'none';
+                document.getElementById('message').innerText = "Could not load chat support";
+                document.getElementById('error').style.display = 'block';
+                document.getElementById('manual-load').style.display = 'block';
             };
             
-            document.head.appendChild(scriptElement);
-            debugLog('Added Intercom script to document head');
+            document.head.appendChild(script);
+            console.log("Intercom script added to head");
         }
         
-        // Fallback to standard snippet
-        function loadIntercomStandardSnippet() {
-            debugLog('Attempting to load Intercom using standard snippet');
+        // Initialize with a delay to ensure DOM is fully loaded
+        setTimeout(initializeIntercom, 500);
+        
+        // Add a manual load button for fallback
+        document.getElementById('manual-load').addEventListener('click', function() {
+            this.disabled = true;
+            this.innerText = "Loading...";
+            document.getElementById('loader').style.display = 'block';
+            document.getElementById('message').innerText = "Trying alternative loading method...";
+            document.getElementById('error').style.display = 'none';
             
+            // Try the standard Intercom snippet as fallback
             try {
-                (function(){var w=window;var ic=w.Intercom;if(typeof ic==="function"){ic('reattach_activator');ic('update',w.intercomSettings);}else{var d=document;var i=function(){i.c(arguments);};i.q=[];i.c=function(args){i.q.push(args);};w.Intercom=i;var l=function(){var s=d.createElement('script');s.type='text/javascript';s.async=true;s.src='https://widget.intercom.io/widget/qqgifgto';var x=d.getElementsByTagName('script')[0];x.parentNode.insertBefore(s,x);};if(document.readyState==='complete'){l();}else if(w.attachEvent){w.attachEvent('onload',l);}else{w.addEventListener('load',l,false);}}})();
+                (function(){
+                    var w=window;
+                    var ic=w.Intercom;
+                    if(typeof ic==="function"){
+                        ic('reattach_activator');
+                        ic('update',w.intercomSettings);
+                    }else{
+                        var d=document;
+                        var i=function(){i.c(arguments);};
+                        i.q=[];
+                        i.c=function(args){i.q.push(args);};
+                        w.Intercom=i;
+                        var l=function(){
+                            var s=d.createElement('script');
+                            s.type='text/javascript';
+                            s.async=true;
+                            s.src='https://widget.intercom.io/widget/qqgifgto';
+                            var x=d.getElementsByTagName('script')[0];
+                            x.parentNode.insertBefore(s,x);
+                        };
+                        if(d.readyState==='complete'){
+                            l();
+                        }else if(w.attachEvent){
+                            w.attachEvent('onload',l);
+                        }else{
+                            w.addEventListener('load',l,false);
+                        }
+                    }
+                })();
                 
-                debugLog('Standard Intercom snippet executed');
-                document.getElementById('intercom-status').textContent = 'Using standard snippet';
-                document.getElementById('intercom-status').style.color = 'orange';
+                // Check if Intercom loads after a delay
+                setTimeout(function() {
+                    if (window.Intercom && typeof window.Intercom === 'function') {
+                        document.getElementById('loader').style.display = 'none';
+                        document.getElementById('message').innerText = "Chat support is ready!";
+                        document.getElementById('manual-load').style.display = 'none';
+                        window.Intercom('show');
+                    } else {
+                        document.getElementById('loader').style.display = 'none';
+                        document.getElementById('message').innerText = "Could not load chat support";
+                        document.getElementById('error').style.display = 'block';
+                        document.getElementById('manual-load').innerText = "Reload Page";
+                        document.getElementById('manual-load').addEventListener('click', function() {
+                            window.location.reload();
+                        });
+                    }
+                }, 3000);
             } catch (error) {
-                debugLog('Error executing standard Intercom snippet: ' + error.message, 'error');
+                console.error("Error in fallback script:", error);
+                document.getElementById('loader').style.display = 'none';
+                document.getElementById('message').innerText = "Could not load chat support";
+                document.getElementById('error').innerText = "Error: " + error.message;
+                document.getElementById('error').style.display = 'block';
+                document.getElementById('manual-load').innerText = "Reload Page";
+                document.getElementById('manual-load').disabled = false;
+                document.getElementById('manual-load').addEventListener('click', function() {
+                    window.location.reload();
+                });
             }
-        }
-        
-        // Function to check if Intercom is loaded
-        function checkIntercomStatus() {
-            if (window.Intercom && typeof window.Intercom === 'function') {
-                debugLog('Intercom is available as a function', 'success');
-                document.getElementById('intercom-status').textContent = 'Available';
-                document.getElementById('intercom-status').style.color = 'green';
-                document.querySelector('.loading').style.display = 'none';
-                return true;
-            } else {
-                debugLog('Intercom not available yet', 'info');
-                return false;
-            }
-        }
-        
-        // Check Intercom status periodically
-        setInterval(checkIntercomStatus, 2000);
-        
-        // Timeout for loading
-        setTimeout(function() {
-            if (!checkIntercomStatus()) {
-                debugLog('Intercom failed to load within timeout period', 'error');
-                document.querySelector('.loading p').textContent = 'Failed to load Intercom. See debug panel below.';
-            }
-        }, 20000);
+        });
     </script>
 </body>
 </html>
