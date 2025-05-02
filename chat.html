@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Chat Support</title>
-    <!-- Add Content Security Policy meta tag to allow scripts -->
+    <!-- Add Content Security Policy meta tag to allow Intercom domains -->
     <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://widget.intercom.io https://js.intercomcdn.com https://api-iam.intercom.io; connect-src https://api-iam.intercom.io wss://*.intercom.io; img-src 'self' https://js.intercomcdn.com data:; style-src 'self' 'unsafe-inline'; frame-src 'self' https://intercom-sheets.com;">
     <style>
         body {
@@ -45,73 +45,83 @@
 <body>
     <div class="loading">
         <div class="spinner"></div>
-        <p>Loading Intercom...</p>
+        <p>Loading Intercom Chat...</p>
     </div>
     
-    <!-- Intercom script -->
+    <!-- Intercom implementation -->
     <script>
-        // Parse URL parameters
+        // Function to get URL parameters
         function getUrlParams() {
             const params = {};
             const queryString = window.location.search;
             const urlParams = new URLSearchParams(queryString);
             
-            // Get all parameter values
-            params.userId = urlParams.get('userId');
-            params.userName = urlParams.get('userName');
-            params.userEmail = urlParams.get('userEmail');
+            // Get all parameter values with fallbacks
+            params.userId = urlParams.get('userId') || 'anonymous-' + Math.random().toString(36).substr(2, 9);
+            params.userName = urlParams.get('userName') || 'Guest User';
+            params.userEmail = urlParams.get('userEmail') || '';
             params.createdAt = urlParams.get('createdAt') ? parseInt(urlParams.get('createdAt')) : Math.floor(Date.now() / 1000);
             
             return params;
         }
         
-        // Initialize Intercom with URL parameters
-        window.onload = function() {
-            const params = getUrlParams();
-            console.log("Loading Intercom with params:", params);
-            
-            // Initialize Intercom settings
-            window.intercomSettings = {
-                api_base: "https://api-iam.intercom.io",
-                app_id: "qqgifgto",
-                user_id: params.userId || "anonymous-" + Math.random().toString(36).substring(2,15),
-                name: params.userName || "Anonymous User",
-                email: params.userEmail,
-                created_at: params.createdAt
-            };
-            
-            // Log settings for debugging
-            console.log("Intercom settings:", window.intercomSettings);
-            
-            // Intercom Snippet
-            (function(){var w=window;var ic=w.Intercom;if(typeof ic==="function"){ic('reattach_activator');ic('update',w.intercomSettings);}else{var d=document;var i=function(){i.c(arguments);};i.q=[];i.c=function(args){i.q.push(args);};w.Intercom=i;var l=function(){var s=d.createElement('script');s.type='text/javascript';s.async=true;s.src='https://widget.intercom.io/widget/qqgifgto';var x=d.getElementsByTagName('script')[0];x.parentNode.insertBefore(s,x);};if(w.attachEvent){w.attachEvent('onload',l);}else{w.addEventListener('load',l,false);}}})();
-            
-            // Automatically show Intercom
-            setTimeout(function() {
-                if (window.Intercom) {
-                    console.log("Opening Intercom messenger");
-                    window.Intercom('show');
-                } else {
-                    console.log("Intercom not loaded yet");
-                }
-            }, 1000);
+        // Get user data from URL
+        const userData = getUrlParams();
+        
+        // Log for debugging
+        console.log("User data from URL:", userData);
+        
+        // Set up Intercom settings exactly as in the standard snippet
+        window.intercomSettings = {
+            api_base: "https://api-iam.intercom.io",
+            app_id: "qqgifgto",
+            user_id: userData.userId,
+            name: userData.userName,
+            email: userData.userEmail,
+            created_at: userData.createdAt
         };
+        
+        // Standard Intercom snippet
+        (function(){var w=window;var ic=w.Intercom;if(typeof ic==="function"){ic('reattach_activator');ic('update',w.intercomSettings);}else{var d=document;var i=function(){i.c(arguments);};i.q=[];i.c=function(args){i.q.push(args);};w.Intercom=i;var l=function(){var s=d.createElement('script');s.type='text/javascript';s.async=true;s.src='https://widget.intercom.io/widget/qqgifgto';var x=d.getElementsByTagName('script')[0];x.parentNode.insertBefore(s,x);};if(document.readyState==='complete'){l();}else if(w.attachEvent){w.attachEvent('onload',l);}else{w.addEventListener('load',l,false);}}})();
     </script>
     
-    <!-- Debugging info (hidden in production) -->
+    <!-- Additional script to auto-show Intercom and handle debugging -->
     <script>
-        // Add console logs to help debug
-        document.addEventListener('DOMContentLoaded', function() {
-            console.log("DOM fully loaded");
-        });
+        // Function to check if Intercom is loaded
+        function isIntercomLoaded() {
+            return typeof window.Intercom === 'function' && window.Intercom.booted;
+        }
         
-        // Check if Intercom loads
-        var intercomCheckInterval = setInterval(function() {
-            if (window.Intercom && typeof window.Intercom === 'function') {
-                console.log("Intercom successfully loaded");
+        // Auto-show Intercom when loaded
+        function checkAndShowIntercom() {
+            console.log("Checking if Intercom is loaded...");
+            
+            if (isIntercomLoaded()) {
+                console.log("Intercom loaded successfully, showing messenger");
+                window.Intercom('show');
+                
+                // Hide the loading indicator
+                document.querySelector('.loading').style.display = 'none';
+                
+                // Stop checking
+                clearInterval(intercomCheckInterval);
+            } else {
+                console.log("Intercom not loaded yet, waiting...");
+            }
+        }
+        
+        // Check every second if Intercom is loaded
+        const intercomCheckInterval = setInterval(checkAndShowIntercom, 1000);
+        
+        // Fallback: If Intercom doesn't load within 10 seconds, show an error
+        setTimeout(function() {
+            if (!isIntercomLoaded()) {
+                console.error("Intercom failed to load within timeout period");
+                document.querySelector('.loading p').textContent = 
+                    "There was an issue loading the chat widget. Please try refreshing the page.";
                 clearInterval(intercomCheckInterval);
             }
-        }, 500);
+        }, 10000);
     </script>
 </body>
 </html>
