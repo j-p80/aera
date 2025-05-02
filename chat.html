@@ -4,176 +4,427 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Chat Support</title>
+    <!-- Override any CSP restrictions for testing -->
+    <meta http-equiv="Content-Security-Policy" content="default-src * 'unsafe-inline' 'unsafe-eval'; script-src * 'unsafe-inline' 'unsafe-eval'; connect-src * 'unsafe-inline'; img-src * data: blob: 'unsafe-inline'; frame-src *; style-src * 'unsafe-inline';">
     <style>
         body {
-            font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            margin: 0;
+            padding: 0;
             display: flex;
             flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            height: 100vh;
-            margin: 0;
-            padding: 20px;
-            text-align: center;
+            min-height: 100vh;
             background-color: #f8f9fa;
         }
-        .container {
-            max-width: 600px;
-            padding: 30px;
-            background-color: white;
-            border-radius: 8px;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        
+        .header {
+            background-color: #fff;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            padding: 15px 20px;
+            text-align: center;
         }
-        h1 {
+        
+        .header h1 {
+            margin: 0;
+            font-size: 24px;
             color: #333;
-            margin-bottom: 20px;
         }
-        p {
-            color: #666;
-            line-height: 1.6;
-            margin-bottom: 25px;
+        
+        .content {
+            flex: 1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
         }
+        
+        .chat-container {
+            background-color: #fff;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            padding: 30px;
+            max-width: 500px;
+            width: 100%;
+            text-align: center;
+        }
+        
+        .action-buttons {
+            margin-top: 30px;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+        
         button {
-            background-color: #0087ff;
+            background-color: #007bff;
             color: white;
             border: none;
-            padding: 12px 24px;
-            font-size: 16px;
             border-radius: 4px;
+            padding: 12px 15px;
+            font-size: 16px;
             cursor: pointer;
             transition: background-color 0.2s;
         }
+        
         button:hover {
             background-color: #0069d9;
         }
-        .loading {
-            display: none;
+        
+        button:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
+        
+        .status {
             margin-top: 20px;
+            padding: 15px;
+            border-radius: 4px;
+            display: none;
         }
-        .spinner {
-            width: 30px;
-            height: 30px;
-            border: 3px solid rgba(0, 0, 0, 0.1);
+        
+        .status.success {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        
+        .status.error {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(0,0,0,0.1);
             border-radius: 50%;
-            border-top-color: #0087ff;
+            border-top-color: #007bff;
             animation: spin 1s ease-in-out infinite;
-            margin: 0 auto 10px;
+            margin-right: 10px;
+            vertical-align: middle;
         }
+        
         @keyframes spin {
             to { transform: rotate(360deg); }
+        }
+        
+        .intercom-frame {
+            display: none;
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            width: 60px;
+            height: 60px;
+            z-index: 2147483647;
+            border: none;
+            border-radius: 50%;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            transition: all 0.3s ease;
+        }
+        
+        .intercom-frame.open {
+            width: 400px;
+            height: 80vh;
+            max-height: 600px;
+            border-radius: 10px;
         }
     </style>
 </head>
 <body>
-    <div class="container">
+    <div class="header">
         <h1>Chat Support</h1>
-        <p>Welcome to our support chat. Click the button below to start a conversation with our team.</p>
-        <button id="openChat">Open Chat</button>
-        <div id="loading" class="loading">
-            <div class="spinner"></div>
-            <p>Opening chat...</p>
+    </div>
+    
+    <div class="content">
+        <div class="chat-container">
+            <h2>Need help? We're here for you!</h2>
+            <p>Choose one of the chat methods below to connect with our support team.</p>
+            
+            <div class="action-buttons">
+                <button id="methodA" onclick="loadIntercomMethod('intercom-direct')">Intercom Direct</button>
+                <button id="methodB" onclick="loadIntercomMethod('iframe-embed')">Iframe Method</button>
+                <button id="methodC" onclick="loadIntercomMethod('redirect')">Redirect Method</button>
+                <button id="methodD" onclick="loadIntercomMethod('intercom-load')">Load & Show</button>
+            </div>
+            
+            <div id="status" class="status"></div>
         </div>
     </div>
-
-    <!-- Intercom Base Code -->
+    
+    <iframe id="intercom-frame" class="intercom-frame"></iframe>
+    
     <script>
-        // Parse URL parameters
+        // Parse URL parameters to get user data
         function getUrlParams() {
             const params = {};
             const queryString = window.location.search;
             const urlParams = new URLSearchParams(queryString);
             
-            params.userId = urlParams.get('userId') || 'anonymous-' + Math.random().toString(36).substr(2, 9);
+            params.userId = urlParams.get('userId') || 'anonymous-' + Math.random().toString(36).substring(2, 9);
             params.userName = urlParams.get('userName') || 'Guest User';
             params.userEmail = urlParams.get('userEmail') || '';
             params.createdAt = urlParams.get('createdAt') ? parseInt(urlParams.get('createdAt')) : Math.floor(Date.now() / 1000);
             
             return params;
         }
-
+        
         const userData = getUrlParams();
+        const APP_ID = 'qqgifgto';
         
-        // Initialize Intercom with user data
-        window.intercomSettings = {
-            api_base: "https://api-iam.intercom.io",
-            app_id: "qqgifgto",
-            user_id: userData.userId,
-            name: userData.userName,
-            email: userData.userEmail,
-            created_at: userData.createdAt,
-            hide_default_launcher: true // Hide the default launcher
-        };
-
-        // Load Intercom
-        (function() {
-            var w = window;
-            var ic = w.Intercom;
-            if (typeof ic === "function") {
-                ic('reattach_activator');
-                ic('update', w.intercomSettings);
-            } else {
-                var d = document;
-                var i = function() {
-                    i.c(arguments);
-                };
-                i.q = [];
-                i.c = function(args) {
-                    i.q.push(args);
-                };
-                w.Intercom = i;
-                var l = function() {
-                    var s = d.createElement('script');
-                    s.type = 'text/javascript';
-                    s.async = true;
-                    s.src = 'https://widget.intercom.io/widget/qqgifgto';
-                    var x = d.getElementsByTagName('script')[0];
-                    x.parentNode.insertBefore(s, x);
-                };
-                if (d.readyState === 'complete') {
-                    l();
-                } else if (w.attachEvent) {
-                    w.attachEvent('onload', l);
-                } else {
-                    w.addEventListener('load', l, false);
-                }
-            }
-        })();
-    </script>
-
-    <!-- Script to handle opening the chat -->
-    <script>
-        document.getElementById('openChat').addEventListener('click', function() {
-            // Show loading indicator
-            document.getElementById('loading').style.display = 'block';
-            this.disabled = true;
+        function setStatusMessage(message, type) {
+            const statusElement = document.getElementById('status');
+            statusElement.textContent = message;
+            statusElement.className = `status ${type}`;
+            statusElement.style.display = 'block';
+        }
+        
+        function clearStatusMessage() {
+            const statusElement = document.getElementById('status');
+            statusElement.style.display = 'none';
+        }
+        
+        function disableButtons() {
+            document.getElementById('methodA').disabled = true;
+            document.getElementById('methodB').disabled = true;
+            document.getElementById('methodC').disabled = true;
+            document.getElementById('methodD').disabled = true;
+        }
+        
+        function enableButtons() {
+            document.getElementById('methodA').disabled = false;
+            document.getElementById('methodB').disabled = false;
+            document.getElementById('methodC').disabled = false;
+            document.getElementById('methodD').disabled = false;
+        }
+        
+        // Load Intercom using different methods
+        function loadIntercomMethod(method) {
+            clearStatusMessage();
             
-            // Small delay to ensure Intercom is loaded
-            setTimeout(function() {
-                if (window.Intercom) {
-                    console.log("Opening Intercom messenger");
-                    window.Intercom('show');
-                    
-                    // Hide loading after a short delay
-                    setTimeout(function() {
-                        document.getElementById('loading').style.display = 'none';
-                        document.getElementById('openChat').disabled = false;
-                    }, 1000);
-                } else {
-                    console.error("Intercom not available");
-                    alert("Chat service is currently unavailable. Please try again later.");
-                    document.getElementById('loading').style.display = 'none';
-                    document.getElementById('openChat').disabled = false;
-                }
-            }, 500);
-        });
-        
-        // Auto-open chat if 'autoOpen=true' is in the URL
-        window.addEventListener('load', function() {
-            const urlParams = new URLSearchParams(window.location.search);
-            if (urlParams.get('autoOpen') === 'true') {
-                document.getElementById('openChat').click();
+            switch (method) {
+                case 'intercom-direct':
+                    loadIntercomDirect();
+                    break;
+                case 'iframe-embed':
+                    loadIntercomIframe();
+                    break;
+                case 'redirect':
+                    redirectToIntercom();
+                    break;
+                case 'intercom-load':
+                    loadAndShowIntercom();
+                    break;
+                default:
+                    setStatusMessage('Unknown method', 'error');
             }
-        });
+        }
+        
+        // Method A: Direct Intercom integration
+        function loadIntercomDirect() {
+            disableButtons();
+            setStatusMessage('<span class="loading"></span> Loading Intercom...', 'info');
+            
+            try {
+                // Clean up any existing Intercom
+                if (window.Intercom) {
+                    try {
+                        window.Intercom('shutdown');
+                    } catch (e) {
+                        console.error('Error shutting down Intercom:', e);
+                    }
+                }
+                
+                // Set up intercom settings
+                window.intercomSettings = {
+                    api_base: "https://api-iam.intercom.io",
+                    app_id: APP_ID,
+                    user_id: userData.userId,
+                    name: userData.userName,
+                    email: userData.userEmail,
+                    created_at: userData.createdAt
+                };
+                
+                // Load Intercom script
+                (function() {
+                    var w = window;
+                    var ic = w.Intercom;
+                    if (typeof ic === "function") {
+                        ic('reattach_activator');
+                        ic('update', w.intercomSettings);
+                    } else {
+                        var d = document;
+                        var i = function() {
+                            i.c(arguments);
+                        };
+                        i.q = [];
+                        i.c = function(args) {
+                            i.q.push(args);
+                        };
+                        w.Intercom = i;
+                        var l = function() {
+                            var s = d.createElement('script');
+                            s.type = 'text/javascript';
+                            s.async = true;
+                            s.src = 'https://widget.intercom.io/widget/' + APP_ID;
+                            var x = d.getElementsByTagName('script')[0];
+                            x.parentNode.insertBefore(s, x);
+                        };
+                        if (d.readyState === 'complete') {
+                            l();
+                        } else if (w.attachEvent) {
+                            w.attachEvent('onload', l);
+                        } else {
+                            w.addEventListener('load', l, false);
+                        }
+                    }
+                })();
+                
+                // Check if Intercom loaded after a delay
+                setTimeout(function() {
+                    try {
+                        if (window.Intercom && typeof window.Intercom === 'function') {
+                            window.Intercom('show');
+                            setStatusMessage('Intercom loaded successfully!', 'success');
+                        } else {
+                            throw new Error('Intercom not available');
+                        }
+                    } catch (error) {
+                        setStatusMessage('Failed to initialize Intercom: ' + error.message, 'error');
+                    }
+                    enableButtons();
+                }, 3000);
+            } catch (error) {
+                setStatusMessage('Error loading Intercom: ' + error.message, 'error');
+                enableButtons();
+            }
+        }
+        
+        // Method B: Iframe embedding approach
+        function loadIntercomIframe() {
+            disableButtons();
+            setStatusMessage('<span class="loading"></span> Preparing iframe...', 'info');
+            
+            try {
+                const iframe = document.getElementById('intercom-frame');
+                
+                // Build the URL with user parameters
+                const url = new URL('https://app.intercom.com/messenger');
+                url.searchParams.append('app_id', APP_ID);
+                url.searchParams.append('user_id', userData.userId);
+                url.searchParams.append('name', userData.userName);
+                if (userData.userEmail) {
+                    url.searchParams.append('email', userData.userEmail);
+                }
+                url.searchParams.append('created_at', userData.createdAt);
+                
+                // Set the iframe src
+                iframe.src = url.toString();
+                iframe.style.display = 'block';
+                
+                // Add event listener to toggle iframe size
+                iframe.addEventListener('load', function() {
+                    setStatusMessage('Chat interface loaded! Click the icon to expand.', 'success');
+                    
+                    // Add click event to toggle expanded state
+                    iframe.addEventListener('click', function() {
+                        if (iframe.classList.contains('open')) {
+                            iframe.classList.remove('open');
+                        } else {
+                            iframe.classList.add('open');
+                        }
+                    });
+                    
+                    enableButtons();
+                });
+            } catch (error) {
+                setStatusMessage('Error setting up iframe: ' + error.message, 'error');
+                enableButtons();
+            }
+        }
+        
+        // Method C: Redirect to Intercom
+        function redirectToIntercom() {
+            disableButtons();
+            setStatusMessage('<span class="loading"></span> Preparing redirect...', 'info');
+            
+            try {
+                // Build the URL with user parameters
+                const url = new URL('https://app.intercom.com/messenger');
+                url.searchParams.append('app_id', APP_ID);
+                url.searchParams.append('user_id', userData.userId);
+                url.searchParams.append('name', userData.userName);
+                if (userData.userEmail) {
+                    url.searchParams.append('email', userData.userEmail);
+                }
+                url.searchParams.append('created_at', userData.createdAt);
+                
+                // Ask user before redirecting
+                if (confirm('This will open Intercom in a new window. Continue?')) {
+                    window.open(url.toString(), '_blank');
+                    setStatusMessage('Opened Intercom in a new window!', 'success');
+                } else {
+                    setStatusMessage('Redirect cancelled.', 'info');
+                }
+                
+                enableButtons();
+            } catch (error) {
+                setStatusMessage('Error preparing redirect: ' + error.message, 'error');
+                enableButtons();
+            }
+        }
+        
+        // Method D: Load and immediately show Intercom
+        function loadAndShowIntercom() {
+            disableButtons();
+            setStatusMessage('<span class="loading"></span> Loading and showing Intercom...', 'info');
+            
+            try {
+                // Create a temporary Intercom function
+                window.Intercom = function() {
+                    window.Intercom.q.push(arguments);
+                };
+                window.Intercom.q = [];
+                
+                // Load the script directly
+                const script = document.createElement('script');
+                script.src = `https://widget.intercom.io/widget/${APP_ID}`;
+                script.async = true;
+                
+                script.onload = function() {
+                    // Boot with user data and show
+                    try {
+                        window.Intercom('boot', {
+                            app_id: APP_ID,
+                            user_id: userData.userId,
+                            name: userData.userName,
+                            email: userData.userEmail,
+                            created_at: userData.createdAt
+                        });
+                        
+                        // Show the messenger
+                        window.Intercom('show');
+                        
+                        setStatusMessage('Intercom loaded and showing!', 'success');
+                    } catch (e) {
+                        setStatusMessage('Error booting Intercom: ' + e.message, 'error');
+                    }
+                    
+                    enableButtons();
+                };
+                
+                script.onerror = function() {
+                    setStatusMessage('Failed to load Intercom script', 'error');
+                    enableButtons();
+                };
+                
+                document.head.appendChild(script);
+            } catch (error) {
+                setStatusMessage('Error in load and show: ' + error.message, 'error');
+                enableButtons();
+            }
+        }
     </script>
 </body>
 </html>
