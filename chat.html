@@ -1,13 +1,179 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>Redirecting to Chat</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chat Support</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+            padding: 20px;
+            text-align: center;
+            background-color: #f8f9fa;
+        }
+        .container {
+            max-width: 600px;
+            padding: 30px;
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+        h1 {
+            color: #333;
+            margin-bottom: 20px;
+        }
+        p {
+            color: #666;
+            line-height: 1.6;
+            margin-bottom: 25px;
+        }
+        button {
+            background-color: #0087ff;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            font-size: 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        button:hover {
+            background-color: #0069d9;
+        }
+        .loading {
+            display: none;
+            margin-top: 20px;
+        }
+        .spinner {
+            width: 30px;
+            height: 30px;
+            border: 3px solid rgba(0, 0, 0, 0.1);
+            border-radius: 50%;
+            border-top-color: #0087ff;
+            animation: spin 1s ease-in-out infinite;
+            margin: 0 auto 10px;
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+    </style>
 </head>
 <body>
-  <p>Opening chat... If nothing happens, please try refreshing.</p>
-  <script>
-    window.location.href = "https://app.intercom.com/a/apps/qqgifgto/";
-  </script>
+    <div class="container">
+        <h1>Chat Support</h1>
+        <p>Welcome to our support chat. Click the button below to start a conversation with our team.</p>
+        <button id="openChat">Open Chat</button>
+        <div id="loading" class="loading">
+            <div class="spinner"></div>
+            <p>Opening chat...</p>
+        </div>
+    </div>
+
+    <!-- Intercom Base Code -->
+    <script>
+        // Parse URL parameters
+        function getUrlParams() {
+            const params = {};
+            const queryString = window.location.search;
+            const urlParams = new URLSearchParams(queryString);
+            
+            params.userId = urlParams.get('userId') || 'anonymous-' + Math.random().toString(36).substr(2, 9);
+            params.userName = urlParams.get('userName') || 'Guest User';
+            params.userEmail = urlParams.get('userEmail') || '';
+            params.createdAt = urlParams.get('createdAt') ? parseInt(urlParams.get('createdAt')) : Math.floor(Date.now() / 1000);
+            
+            return params;
+        }
+
+        const userData = getUrlParams();
+        
+        // Initialize Intercom with user data
+        window.intercomSettings = {
+            api_base: "https://api-iam.intercom.io",
+            app_id: "qqgifgto",
+            user_id: userData.userId,
+            name: userData.userName,
+            email: userData.userEmail,
+            created_at: userData.createdAt,
+            hide_default_launcher: true // Hide the default launcher
+        };
+
+        // Load Intercom
+        (function() {
+            var w = window;
+            var ic = w.Intercom;
+            if (typeof ic === "function") {
+                ic('reattach_activator');
+                ic('update', w.intercomSettings);
+            } else {
+                var d = document;
+                var i = function() {
+                    i.c(arguments);
+                };
+                i.q = [];
+                i.c = function(args) {
+                    i.q.push(args);
+                };
+                w.Intercom = i;
+                var l = function() {
+                    var s = d.createElement('script');
+                    s.type = 'text/javascript';
+                    s.async = true;
+                    s.src = 'https://widget.intercom.io/widget/qqgifgto';
+                    var x = d.getElementsByTagName('script')[0];
+                    x.parentNode.insertBefore(s, x);
+                };
+                if (d.readyState === 'complete') {
+                    l();
+                } else if (w.attachEvent) {
+                    w.attachEvent('onload', l);
+                } else {
+                    w.addEventListener('load', l, false);
+                }
+            }
+        })();
+    </script>
+
+    <!-- Script to handle opening the chat -->
+    <script>
+        document.getElementById('openChat').addEventListener('click', function() {
+            // Show loading indicator
+            document.getElementById('loading').style.display = 'block';
+            this.disabled = true;
+            
+            // Small delay to ensure Intercom is loaded
+            setTimeout(function() {
+                if (window.Intercom) {
+                    console.log("Opening Intercom messenger");
+                    window.Intercom('show');
+                    
+                    // Hide loading after a short delay
+                    setTimeout(function() {
+                        document.getElementById('loading').style.display = 'none';
+                        document.getElementById('openChat').disabled = false;
+                    }, 1000);
+                } else {
+                    console.error("Intercom not available");
+                    alert("Chat service is currently unavailable. Please try again later.");
+                    document.getElementById('loading').style.display = 'none';
+                    document.getElementById('openChat').disabled = false;
+                }
+            }, 500);
+        });
+        
+        // Auto-open chat if 'autoOpen=true' is in the URL
+        window.addEventListener('load', function() {
+            const urlParams = new URLSearchParams(window.location.search);
+            if (urlParams.get('autoOpen') === 'true') {
+                document.getElementById('openChat').click();
+            }
+        });
+    </script>
 </body>
 </html>
