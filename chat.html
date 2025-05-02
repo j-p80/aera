@@ -1,47 +1,117 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Intercom Chat</title>
-  <style>
-    body {
-      margin: 0;
-      padding: 0;
-      font-family: sans-serif;
-      height: 100vh;
-      width: 100vw;
-      background-color: transparent;
-    }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Chat Support</title>
+    <!-- Add Content Security Policy meta tag to allow scripts -->
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://widget.intercom.io https://js.intercomcdn.com https://api-iam.intercom.io; connect-src https://api-iam.intercom.io wss://*.intercom.io; img-src 'self' https://js.intercomcdn.com data:; style-src 'self' 'unsafe-inline'; frame-src 'self' https://intercom-sheets.com;">
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: sans-serif;
+            height: 100vh;
+            width: 100vw;
+            background-color: transparent;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .loading {
+            text-align: center;
+            font-size: 18px;
+            color: #333;
+        }
+        
+        .spinner {
+            width: 40px;
+            height: 40px;
+            margin: 20px auto;
+            border-radius: 50%;
+            border: 5px solid #f3f3f3;
+            border-top: 5px solid #3498db;
+            animation: spin 1.5s linear infinite;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
 </head>
 <body>
-  <p><H1>Landing Page - script working?</H1></p>
-  <script>
-    // Parse URL parameters
-    const urlParams = new URLSearchParams(window.location.search);
-    const userId = urlParams.get('userId') || 'default-user';
-    const userName = urlParams.get('userName') || 'Default User';
-    const userEmail = urlParams.get('userEmail') || 'default@example.com';
-    const createdAt = parseInt(urlParams.get('createdAt') || Math.floor(Date.now() / 1000));
+    <div class="loading">
+        <div class="spinner"></div>
+        <p>Loading Intercom...</p>
+    </div>
     
-    // Set up Intercom with the parsed parameters
-    window.intercomSettings = {
-      api_base: "https://api-iam.intercom.io",
-      app_id: "qqgifgto",
-      user_id: userId,
-      name: userName,
-      email: userEmail,
-      created_at: createdAt
-    };
+    <!-- Intercom script -->
+    <script>
+        // Parse URL parameters
+        function getUrlParams() {
+            const params = {};
+            const queryString = window.location.search;
+            const urlParams = new URLSearchParams(queryString);
+            
+            // Get all parameter values
+            params.userId = urlParams.get('userId');
+            params.userName = urlParams.get('userName');
+            params.userEmail = urlParams.get('userEmail');
+            params.createdAt = urlParams.get('createdAt') ? parseInt(urlParams.get('createdAt')) : Math.floor(Date.now() / 1000);
+            
+            return params;
+        }
+        
+        // Initialize Intercom with URL parameters
+        window.onload = function() {
+            const params = getUrlParams();
+            console.log("Loading Intercom with params:", params);
+            
+            // Initialize Intercom settings
+            window.intercomSettings = {
+                api_base: "https://api-iam.intercom.io",
+                app_id: "qqgifgto",
+                user_id: params.userId || "anonymous-" + Math.random().toString(36).substring(2,15),
+                name: params.userName || "Anonymous User",
+                email: params.userEmail,
+                created_at: params.createdAt
+            };
+            
+            // Log settings for debugging
+            console.log("Intercom settings:", window.intercomSettings);
+            
+            // Intercom Snippet
+            (function(){var w=window;var ic=w.Intercom;if(typeof ic==="function"){ic('reattach_activator');ic('update',w.intercomSettings);}else{var d=document;var i=function(){i.c(arguments);};i.q=[];i.c=function(args){i.q.push(args);};w.Intercom=i;var l=function(){var s=d.createElement('script');s.type='text/javascript';s.async=true;s.src='https://widget.intercom.io/widget/qqgifgto';var x=d.getElementsByTagName('script')[0];x.parentNode.insertBefore(s,x);};if(w.attachEvent){w.attachEvent('onload',l);}else{w.addEventListener('load',l,false);}}})();
+            
+            // Automatically show Intercom
+            setTimeout(function() {
+                if (window.Intercom) {
+                    console.log("Opening Intercom messenger");
+                    window.Intercom('show');
+                } else {
+                    console.log("Intercom not loaded yet");
+                }
+            }, 1000);
+        };
+    </script>
     
-    // Log the parameters for debugging (you can remove this in production)
-    console.log("Intercom settings:", window.intercomSettings);
-  </script>
-  
-  <script>
-    // Intercom widget code
-    (function(){var w=window;var ic=w.Intercom;if(typeof ic==="function"){ic('reattach_activator');ic('update',w.intercomSettings);}else{var d=document;var i=function(){i.c(arguments);};i.q=[];i.c=function(args){i.q.push(args);};w.Intercom=i;var l=function(){var s=d.createElement('script');s.type='text/javascript';s.async=true;s.src='https://widget.intercom.io/widget/qqgifgto';var x=d.getElementsByTagName('script')[0];x.parentNode.insertBefore(s,x);};if(document.readyState==='complete'){l();}else if(w.attachEvent){w.attachEvent('onload',l);}else{w.addEventListener('load',l,false);}}})();
-  </script>
+    <!-- Debugging info (hidden in production) -->
+    <script>
+        // Add console logs to help debug
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log("DOM fully loaded");
+        });
+        
+        // Check if Intercom loads
+        var intercomCheckInterval = setInterval(function() {
+            if (window.Intercom && typeof window.Intercom === 'function') {
+                console.log("Intercom successfully loaded");
+                clearInterval(intercomCheckInterval);
+            }
+        }, 500);
+    </script>
 </body>
 </html>
